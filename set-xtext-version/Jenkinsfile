@@ -2,7 +2,7 @@ pipeline {
   agent {
     kubernetes {
       label 'build-test-pod'
-      defaultContainer 'xtext-buildenv'
+      defaultContainer 'jnlp'
       yaml '''
         apiVersion: v1
         kind: Pod
@@ -32,7 +32,7 @@ pipeline {
     string(name: 'AUTHOR_NAME', description: 'Committer name (used for Git commits)')
     string(name: 'AUTHOR_EMAIL', description: 'Committer email address (used for Git commits)')
     string(name: 'SOURCE_BRANCH', defaultValue: 'master', description: 'Source Git Branch')
-    string(name: 'TARGET_BRANCH', defaultValue: 'releng_set_version', description: 'Target Git Branch')
+    string(name: 'TARGET_BRANCH', defaultValue: 'set_version', description: 'Target Git Branch')
     booleanParam(name: 'ALL_REPOSITORIES', defaultValue: true, description: 'Perform modification on ALL repositories. If NOT checked, the TARGET_REPOSITORY below is used.')
     choice(name: 'TARGET_REPOSITORY', choices: ['xtext-lib', 'xtext-core', 'xtext-extras', 'xtext-eclipse', 'xtext-xtend', 'xtext-maven', 'xtext-web', 'xtext-idea', 'xtext-umbrella'], description: 'ONLY used when ALL_REPOSITORIES is NOT SET. Repository to modify.')
     string(name: 'NEW_XTEXT_VERSION', description: 'New Xtext version to set (major.minor.micro, without SNAPSHOT)')
@@ -44,42 +44,56 @@ pipeline {
     disableConcurrentBuilds()
   }
 
+  environment {
+    repositoryNames = "${params.ALL_REPOSITORIES ? ['xtext-lib,xtext-core,xtext-extras,xtext-eclipse,xtext-xtend,xtext-maven,xtext-web,xtext-umbrella' : params.TARGET_REPOSITORY}"
+  }
+
   stages {
     stage('Checkout') {
       steps {
-          checkout scm
-          script {
-            def gitFunctions    = load 'build-tools/git_functions.groovy'
-            
-            // Check preconditions
-            if (!AUTHOR_NAME?.trim() || !AUTHOR_EMAIL?.trim()) {
-              currentBuild.result = 'ABORTED'
-              error('Author required.')
-            }
-            if (TARGET_BRANCH == 'master') {
-              currentBuild.result = 'ABORTED'
-              error('TARGET_BRANCH \'master\' is disallowed...')
-            }
-            if (!NEW_XTEXT_VERSION?.matches('\\d\\.\\d+\\.\\d+')) {
-              currentBuild.result = 'ABORTED'
-              error("NEW_XTEXT_VERSION '${NEW_XTEXT_VERSION}' Invalid...")
-            }
+        checkout scm
+        script {
+          def gitFunctions    = load 'build-tools/git_functions.groovy'
+          
+          // Check preconditions
+          if (!AUTHOR_NAME?.trim() || !AUTHOR_EMAIL?.trim()) {
+            currentBuild.result = 'ABORTED'
+            error('Author required.')
+          }
+          if (TARGET_BRANCH == 'master') {
+            currentBuild.result = 'ABORTED'
+            error('TARGET_BRANCH \'master\' is disallowed...')
+          }
+          if (!NEW_XTEXT_VERSION?.matches('\\d\\.\\d+\\.\\d+')) {
+            currentBuild.result = 'ABORTED'
+            error("NEW_XTEXT_VERSION '${NEW_XTEXT_VERSION}' Invalid...")
+          }
 
-            // list of Xtext repository names
-            def repositoryNames = ALL_REPOSITORIES ? ['xtext-lib', 'xtext-core', 'xtext-extras', 'xtext-eclipse', 'xtext-xtend', 'xtext-maven', 'xtext-web', 'xtext-umbrella'] : [TARGET_REPOSITORY]
-            
-            // checkout source branch for each repository and create the target branch
-            repositoryNames.each {
+          // checkout source branch for each repository and create the target branch
+        sshagent([CREDENTIAL_ID_GENIE_XTEXT_GITHUB]) {
+          repositoryNames.split(',').each {
+            if(fileExists("${it}/.git")) {
               dir(it) {
-                git url: "git@github.com:eclipse/${it}.git", branch: SOURCE_BRANCH, credentialsId: CREDENTIAL_ID_GENIE_XTEXT_GITHUB
+                    git.resetHard()
+                    git.checkoutBranch(params.SOURCE_BRANCH)
+                    git.pull(params.SOURCE_BRANCH)
+                    // When release branch already exists, then delete it and create a new one
+                    if (git.branchExists(TARGET_BRANCH)) {
+                      git.deleteBranch(TARGET_BRANCH)
+                    }
               }
-              // When release branch already exists, then delete it and create a new one
-              if (gitFunctions.branchExists(it, TARGET_BRANCH)){
-                gitFunctions.deleteBranch(TARGET_BRANCH)
-              }
-              gitFunctions.createBranch(it, TARGET_BRANCH)
+            } else {
+              sh "git clone -b ${params.SOURCE_BRANCH} --depth 1 --no-tags ${baseGitURL}/${it}.git"
+            }
+            dir(it) {
+              sh """
+                git config user.name ${gitUser}
+                git config user.email ${gitEmail}
+              """
+              git.createBranch(TARGET_BRANCH)
             }
           }
+        }
       }
     }
 
@@ -91,16 +105,13 @@ pipeline {
         script {
           def git    = load 'build-tools/git_functions.groovy'
           def gradle = load 'build-tools/gradle_functions.groovy'
-          def FROM_VERSION = gradle.getXtextVersion()
-          // list of Xtext repository names
-          def repositoryNames = ALL_REPOSITORIES ? ['xtext-lib', 'xtext-core', 'xtext-extras', 'xtext-eclipse', 'xtext-xtend', 'xtext-maven', 'xtext-web', 'xtext-umbrella'] : [TARGET_REPOSITORY]
-          def git    = load 'build-tools/git_functions.groovy'
+          def FROM_VERSION = gradle.getXtextVersion(SOURCE_BRANCH)
           
           // MODIFY
           sh "sh build-tools/fixVersions.sh -f $FROM_VERSION -t $NEW_XTEXT_VERSION -b StoS"
 
           // COMMIT
-          repositoryNames.each {
+          repositoryNames.split(',').each {
             git.getGitChanges(it)
             git.commit(it, "[releng] Set version to ${NEW_XTEXT_VERSION}", AUTHOR_NAME, AUTHOR_EMAIL)
           }
@@ -109,25 +120,19 @@ pipeline {
     }
     
     stage('Push') {
-      when {
-        expression { !params.DRY_RUN }
-      }
       steps {
-        
         // TODO: git push does not work in the xtext-buildenv container
         //   No user exists for uid 1000100000
         //   fatal: Could not read from remote repository.
         // But jnlp does not contain hub utility
-        container ('eclipsecbi-fedora') {  
-          script {
-            def git    = load 'build-tools/git_functions.groovy'
-            def repositoryNames = ALL_REPOSITORIES ? ['xtext-lib', 'xtext-core', 'xtext-extras', 'xtext-eclipse', 'xtext-xtend', 'xtext-maven', 'xtext-web', 'xtext-umbrella'] : [TARGET_REPOSITORY]
-            if(!params.DRY_RUN){
-              sshagent([CREDENTIAL_ID_GENIE_XTEXT_GITHUB]) {
-                sh "echo pushing branch ${TARGET_BRANCH}"
-                repositoryNames.each {
-                  git.pushGitChanges(it, TARGET_BRANCH, true)
-                }
+        script {
+          def git    = load 'build-tools/git_functions.groovy'
+          
+          sshagent([CREDENTIAL_ID_GENIE_XTEXT_GITHUB]) {
+            repositoryNames.split(',').each {
+              sh "${it}: echo pushing branch ${TARGET_BRANCH}"
+              if(!params.DRY_RUN) {
+                git.pushGitChanges(it, TARGET_BRANCH, true)
               }
             }
           }
