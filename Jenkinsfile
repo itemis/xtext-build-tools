@@ -36,7 +36,8 @@ spec:
 
   options {
     buildDiscarder(logRotator(numToKeepStr:'5'))
-    timeout(time: 90, unit: 'MINUTES')
+    timeout(time: 60, unit: 'MINUTES')
+    timestamps()
   }
   
   environment {
