@@ -136,6 +136,15 @@ pipeline {
               versions.getLatestArtifactVersion('org.eclipse.jdt',"org.eclipse.${it}")
             ])
           }
+          // EMF
+          ['emf.codegen','codegen.ecore','jemf.common','emf.ecore','emf.ecore.change','emf.ecore.xmi'].each {
+            results.add([
+              'versions.BOM',
+              "org.eclipse.${it}",
+              versions.getVersionFromBOM(it, SOURCE_BRANCH),
+              versions.getLatestArtifactVersion('org.eclipse.emf',"org.eclipse.${it}")
+            ])
+          }
           results.add([
             'versions.BOM',
             'javax.annotation-api',
