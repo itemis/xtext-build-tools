@@ -137,7 +137,7 @@ pipeline {
             ])
           }
           // EMF
-          ['emf.codegen','codegen.ecore','jemf.common','emf.ecore','emf.ecore.change','emf.ecore.xmi'].each {
+          ['emf.codegen','codegen.ecore','emf.common','emf.ecore','emf.ecore.change','emf.ecore.xmi'].each {
             results.add([
               'versions.BOM',
               "org.eclipse.${it}",
