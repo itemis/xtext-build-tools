@@ -45,7 +45,7 @@ pipeline {
   }
 
   environment {
-    repositoryNames = "${params.ALL_REPOSITORIES ? ['xtext-lib,xtext-core,xtext-extras,xtext-eclipse,xtext-xtend,xtext-maven,xtext-web,xtext-umbrella' : params.TARGET_REPOSITORY}"
+    repositoryNames = "${params.ALL_REPOSITORIES ? ['xtext-lib,xtext-core,xtext-extras,xtext-eclipse,xtext-xtend,xtext-maven,xtext-web,xtext-umbrella'] : params.TARGET_REPOSITORY}"
   }
 
   stages {
