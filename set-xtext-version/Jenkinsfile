@@ -70,27 +70,28 @@ pipeline {
           }
 
           // checkout source branch for each repository and create the target branch
-        sshagent([CREDENTIAL_ID_GENIE_XTEXT_GITHUB]) {
-          repositoryNames.split(',').each {
-            if(fileExists("${it}/.git")) {
-              dir(it) {
-                    git.resetHard()
-                    git.checkoutBranch(params.SOURCE_BRANCH)
-                    git.pull(params.SOURCE_BRANCH)
-                    // When release branch already exists, then delete it and create a new one
-                    if (git.branchExists(TARGET_BRANCH)) {
-                      git.deleteBranch(TARGET_BRANCH)
-                    }
+          sshagent([CREDENTIAL_ID_GENIE_XTEXT_GITHUB]) {
+            repositoryNames.split(',').each {
+              if(fileExists("${it}/.git")) {
+                dir(it) {
+                      git.resetHard()
+                      git.checkoutBranch(params.SOURCE_BRANCH)
+                      git.pull(params.SOURCE_BRANCH)
+                      // When release branch already exists, then delete it and create a new one
+                      if (git.branchExists(TARGET_BRANCH)) {
+                        git.deleteBranch(TARGET_BRANCH)
+                      }
+                }
+              } else {
+                sh "git clone -b ${params.SOURCE_BRANCH} --depth 1 --no-tags ${baseGitURL}/${it}.git"
               }
-            } else {
-              sh "git clone -b ${params.SOURCE_BRANCH} --depth 1 --no-tags ${baseGitURL}/${it}.git"
-            }
-            dir(it) {
-              sh """
-                git config user.name ${gitUser}
-                git config user.email ${gitEmail}
-              """
-              git.createBranch(TARGET_BRANCH)
+              dir(it) {
+                sh """
+                  git config user.name ${gitUser}
+                  git config user.email ${gitEmail}
+                """
+                git.createBranch(TARGET_BRANCH)
+              }
             }
           }
         }
@@ -118,7 +119,6 @@ pipeline {
         } // script
       }
     }
-    
     stage('Push') {
       steps {
         // TODO: git push does not work in the xtext-buildenv container
