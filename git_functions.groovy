@@ -82,12 +82,10 @@ def push(branch, openPR=false) {
         script: "hub pull-request -m '**** TEST TEST ${message}'",
         returnStatus: true
         )
-        /*
         if (rc == 0 && openPR) {
           def message = sh (script: "git log -1 --pretty='format:%s'", returnStdout: true)
           rc = createPullRequest('eclipse',path,message,branch,'master')
         }
-        */
         return rc
     }
     */
