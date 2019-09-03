@@ -144,17 +144,16 @@ pipeline {
         script {
           def git    = load 'build-tools/git_functions.groovy'
           
-          sshagent([CREDENTIAL_ID_GENIE_XTEXT_GITHUB]) {
-            repositoryNames.split(',').each {
-              dir (it) {
-                sh "${it}: echo pushing branch ${params.TARGET_BRANCH}"
-                if(!params.DRY_RUN) {
-                  git.push(params.TARGET_BRANCH)
+          if(!params.DRY_RUN) {
+            sshagent([CREDENTIAL_ID_GENIE_XTEXT_GITHUB]) {
+              repositoryNames.split(',').each {
+                dir (it) {
+                  sh "git push --force origin ${params.TARGET_BRANCH}"
                 }
               }
             }
-          }
-        }
+          } // if
+        } // script
       } // steps
     } // stage
   } // stages
