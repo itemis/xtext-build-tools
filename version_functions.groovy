@@ -56,10 +56,11 @@ def getXtextBootstrapVersion (branch) {
 /**
  * Get a version configured in Xtext's dev-bom BOM.
  * @param branch (Optional) Branch on GH repository to check
- * @param id Version property identifier from BOM's properties section, without '-version' suffix. For example 'core.commands'
+ * @param id groupId:artifactId. For example 'org.eclipse.platform:org.eclipse.core.commands'
  */
+
 def getVersionFromBOM (id, branch='master') {
-  return sh (script: "curl -s https://raw.githubusercontent.com/eclipse/xtext-lib/${branch}/releng/org.eclipse.xtext.dev-bom/pom.xml |grep -Po '${id}-version>\\K[^<]*'", returnStdout: true).trim()
+  return sh (script: "curl -s https://raw.githubusercontent.com/eclipse/xtext-lib/${branch}/org.eclipse.xtext.dev-bom/build.gradle |grep -Po 'api \\\"${id}:\\K[^\"]*'", returnStdout: true).trim()
 }
 
 return this
