@@ -83,7 +83,6 @@ node {
     dir('xtext-lib') {
       // do not pass snapshotVersion. Just set xtextVersion.
       gradle.gradleVersionUpdate(xtextVersion,snapshotVersion)
-      pom.pomVersionUpdate("$workspace/xtext-lib/releng/org.eclipse.xtext.dev-bom/pom.xml", xtextVersion)
       pom.changePomDependencyVersion(xtextVersion, "$workspace/xtext-lib/releng/pom.xml", snapshotVersion)
     }
       

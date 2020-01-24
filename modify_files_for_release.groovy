@@ -11,7 +11,6 @@ def jenkinsfile = new jenkins_functions()
 switch (repoId) {
   case 'xtext-lib' :
     gradle.gradleVersionUpdate(xtextVersion)
-    pom.pomVersionUpdate('releng/org.eclipse.xtext.dev-bom/pom.xml', xtextVersion)
     pom.changePomDependencyVersion(xtextVersion, 'releng/pom.xml', snapshotVersion)
     break
   case 'xtext-core' :
