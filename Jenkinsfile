@@ -15,7 +15,7 @@ spec:
     - mountPath: /home/jenkins/.ssh
       name: volume-known-hosts
   - name: groovy
-    image: 'groovy:jre11'
+    image: 'groovy:2.5.9-jre11'
     tty: true
     command: ["/bin/bash"]
   volumes:
