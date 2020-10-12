@@ -8,6 +8,9 @@ def changePomDependencyVersion(xtext_version, pomFile, snapshot_version) {
   pom.dependencies.dependency.each { dependency ->
      pom.dependencies.dependency.version="${dependency.version}".replace(snapshot_version, xtext_version)
   }
+  pom.dependencyManagement.dependencies.dependency.findAll{it.artifactId.text() == 'xtext-dev-bom' }.each { dependency ->
+     pom.dependencyManagement.dependencies.dependency.version="${dependency.version}".replace(snapshot_version, xtext_version)
+  }
   writeXML (pom, pomFile)
 }
 
