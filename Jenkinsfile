@@ -50,7 +50,7 @@ spec:
     // repositoryNames = 'xtext-umbrella'
     branchName="${params.RELEASE != 'GA' ? 'milestone_'+params.XTEXT_VERSION+'.'+params.RELEASE : 'release_'+params.XTEXT_VERSION}"
     gitUser="genie.xtext"
-    gitEmail="genie.xtext@git.eclipse.org"
+    gitEmail="xtext-github@eclipse.org"
   }
 
   // TODO Make property XTEXT_VERSION obsolete. The base version can be retrieved from xtext-lib/gradle/version.gradle
