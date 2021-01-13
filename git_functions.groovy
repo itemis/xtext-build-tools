@@ -19,7 +19,7 @@ def boolean pull(branch, remote='origin') {
 }
 
 
-def commit(message, gitName='genie.xtext', gitEmail='genie.xtext@git.eclipse.org') {
+def commit(message, gitName='genie.xtext', gitEmail='xtext-github@eclipse.org') {
     def git_cmd
     print sh(
         script: 'git add -A',
